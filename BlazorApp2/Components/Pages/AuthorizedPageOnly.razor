@@ -1,0 +1,19 @@
+﻿@page "/authorized-page-only"
+
+@attribute [Authorize]
+
+<PageTitle>Authorized Page Only</PageTitle>
+
+<h3>Authorized Page Only</h3>
+
+<p>
+	You can only see this page if you are authenticated.
+</p>
+
+<AuthorizeView>
+	<Authorized>
+		<p>Email: @context.User.Identity?.Name</p>
+	</Authorized>
+</AuthorizeView>
+
+<a href="/">Go back Home</a>

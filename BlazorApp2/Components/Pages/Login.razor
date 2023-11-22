@@ -1,0 +1,62 @@
+﻿@page "/login"
+
+@inject IAuthService AuthService
+@inject ProtectedLocalStorage ProtectedLocalStorage
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<h3>Login</h3>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+	<p style="color: red;">@errorMessage</p>
+}
+
+<EditForm Model="@loginInputModel" OnValidSubmit="LoginAsync" FormName="loginForm">
+	<DataAnnotationsValidator />
+
+	<label>Email:</label>
+	<InputText @bind-Value="@loginInputModel.Email" placeholder="Enter email" />
+	<ValidationMessage For="@(() => loginInputModel.Email)" />
+
+	<br />
+
+	<label>Password:</label>
+	<InputText @bind-Value="@loginInputModel.Password" placeholder="Enter password" />
+	<ValidationMessage For="@(() => loginInputModel.Password)" />
+
+	<br />
+
+	<button type="submit">Login</button>
+</EditForm>
+
+<br />
+
+<a href="/">Go back Home</a>
+
+@code {
+	[Parameter, SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+	private LoginInputModel loginInputModel = new();
+	private string? errorMessage;
+
+	private async Task LoginAsync()
+	{
+		errorMessage = null;
+
+		TokenDTO? tokens = await AuthService.LoginAsync(loginInputModel);
+
+		if (tokens is null)
+		{
+			errorMessage = "Invalid credentials or server issue.";
+
+			return;
+		}
+
+		await ProtectedLocalStorage.SetAsync("tokens", tokens);
+
+		await ((JWTAuthStateProvider)AuthenticationStateProvider).NotifyAuthenticationStateChangedAsync();
+
+		NavigationManager.NavigateTo(string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl);
+	}
+}

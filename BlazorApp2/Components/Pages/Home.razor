@@ -1,0 +1,33 @@
+﻿@page "/"
+
+<PageTitle>Home</PageTitle>
+
+<h1>JWT Blazor Server authorization issue</h1>
+
+<p>JWT Blazor Server (prerender off) authorization issue occurs by following the instruction:</p>
+
+<ol>
+	<li>(Remember to open Package Manager Console and running 'Update-Database' command)</li>
+	<li><a href="/register">Register</a> a user</li>
+	<li><a href="/login">Login</a> with the user</li>
+	<li>Navigate to <a href="/authorized-page-only">Authorized Page Only</a></li>
+	<li>Press F5 (refresh the page) - it says HTTP ERROR 401</li>
+</ol>
+
+<a href="/authorized-page-only">Go to <b>[Authorize]</b>'d Page Only</a>
+
+<br />
+
+<a href="/register">Register</a>
+
+<br />
+
+<AuthorizeView>
+	<Authorized>
+		<a href="/logout">Logout</a>
+	</Authorized>
+
+	<NotAuthorized>
+		<a href="/login">Login</a>
+	</NotAuthorized>
+</AuthorizeView>

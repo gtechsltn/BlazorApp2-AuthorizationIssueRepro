@@ -1,0 +1,60 @@
+﻿@page "/register"
+
+@inject IUserService UserService
+@inject NavigationManager NavigationManager
+
+<h3>Register</h3>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+	<p style="color: red;">@errorMessage</p>
+}
+
+<EditForm Model="@registerInputModel" OnValidSubmit="RegisterAsync" FormName="registerForm">
+	<DataAnnotationsValidator />
+
+	<label>Email:</label>
+	<InputText @bind-Value="@registerInputModel.Email" placeholder="Enter email" />
+	<ValidationMessage For="@(() => registerInputModel.Email)" />
+
+	<br />
+
+	<label>Password:</label>
+	<InputText @bind-Value="@registerInputModel.Password" placeholder="Enter password" />
+	<ValidationMessage For="@(() => registerInputModel.Password)" />
+
+	<br />
+
+	<label>Confirm Password:</label>
+	<InputText @bind-Value="@registerInputModel.ConfirmPassword" placeholder="Confirm password" />
+	<ValidationMessage For="@(() => registerInputModel.ConfirmPassword)" />
+
+	<br />
+
+	<button type="submit">Register</button>
+</EditForm>
+
+<br />
+
+<a href="/">Go back Home</a>
+
+@code {
+	private RegisterInputModel registerInputModel = new();
+	private string? errorMessage;
+
+	private async Task RegisterAsync()
+	{
+		errorMessage = null;
+
+		ApplicationUser? registeredUser = await UserService.RegisterUserAsync(registerInputModel);
+
+		if (registeredUser is null)
+		{
+			errorMessage = "Invalid credentials or server issue.";
+
+			return;
+		}
+
+		NavigationManager.NavigateTo("/");
+	}
+}

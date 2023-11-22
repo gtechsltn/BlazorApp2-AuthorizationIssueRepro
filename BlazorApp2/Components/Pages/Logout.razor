@@ -1,0 +1,18 @@
+﻿@page "/logout"
+
+@inject NavigationManager NavigationManager
+@inject ProtectedLocalStorage ProtectedLocalStorage
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@code {
+	[Parameter, SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+	protected override async Task OnInitializedAsync()
+	{
+		await ProtectedLocalStorage.DeleteAsync("tokens");
+
+		await ((JWTAuthStateProvider)AuthenticationStateProvider).NotifyAuthenticationStateChangedAsync();
+
+		NavigationManager.NavigateTo(string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl);
+	}
+}
