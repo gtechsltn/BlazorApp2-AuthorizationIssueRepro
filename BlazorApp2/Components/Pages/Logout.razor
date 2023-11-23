@@ -11,7 +11,7 @@
 	{
 		await ProtectedLocalStorage.DeleteAsync("tokens");
 
-		await ((JWTAuthStateProvider)AuthenticationStateProvider).NotifyAuthenticationStateChangedAsync();
+		((JWTAuthStateProvider)AuthenticationStateProvider).NotifyAuthenticationState();
 
 		NavigationManager.NavigateTo(string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl);
 	}

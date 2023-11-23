@@ -12,8 +12,7 @@ public sealed class JWTAuthStateProvider(ProtectedLocalStorage protectedLocalSto
 	{
 		try
 		{
-			ClaimsIdentity claimsIdentity = new();
-
+			var claimsIdentity = new ClaimsIdentity();
 			var tokens = await protectedLocalStorage.GetAsync<TokenDTO>("tokens");
 
 			if (!tokens.Success || tokens.Value is null)
@@ -21,28 +20,38 @@ public sealed class JWTAuthStateProvider(ProtectedLocalStorage protectedLocalSto
 				return new AuthenticationState(new(new ClaimsIdentity()));
 			}
 
-			string accessToken = tokens.Value.AccessToken;
-			string refreshToken = tokens.Value.RefreshToken;
+			var accessToken = tokens.Value.AccessToken;
+			var refreshToken = tokens.Value.RefreshToken;
 
 			claimsIdentity = new(new JwtSecurityTokenHandler().ReadJwtToken(accessToken).Claims, "jwtAuthType");
-			DateTimeOffset accessTokenExpiry = DateTimeOffset.FromUnixTimeSeconds(long.Parse(claimsIdentity.FindFirst("exp")!.Value));
 
-			if (accessTokenExpiry <= DateTime.UtcNow.AddMinutes(1))
+			var expiryInUnixSeconds = Convert.ToInt64(claimsIdentity.FindFirst("exp")?.Value);
+			var accessTokenExpiryDate = DateTimeOffset.FromUnixTimeSeconds(expiryInUnixSeconds);
+
+			if (accessTokenExpiryDate <= DateTime.UtcNow.AddMinutes(1))
 			{
-				string? newAccessToken = await RefreshTokenAsync(new(accessToken, refreshToken));
+				var newAccessToken = await RefreshTokenAsync(new(accessToken, refreshToken));
 
 				claimsIdentity = !string.IsNullOrWhiteSpace(newAccessToken) ? new(new JwtSecurityTokenHandler().ReadJwtToken(accessToken).Claims, "jwtAuthType") : new();
 			}
 
-			ClaimsPrincipal claimsPrincipal = new(claimsIdentity);
-			AuthenticationState authenticationState = new(claimsPrincipal);
-
-			return authenticationState;
+			var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+		
+			return new AuthenticationState(claimsPrincipal);
 		}
 		catch (CryptographicException)
 		{
 			return new AuthenticationState(new(new ClaimsIdentity()));
 		}
+	}
+
+	public void NotifyAuthenticationState(TokenDTO? tokens = null)
+	{
+		var claimsIdentity = tokens is not null ? new ClaimsIdentity(new JwtSecurityTokenHandler().ReadJwtToken(tokens.AccessToken).Claims, "jwtAuthType") : new ClaimsIdentity();
+		var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+		var authStateTask = Task.FromResult(new AuthenticationState(claimsPrincipal));
+
+		NotifyAuthenticationStateChanged(authStateTask);
 	}
 
 	private async Task<string?> RefreshTokenAsync(TokenDTO tokens)
@@ -51,18 +60,13 @@ public sealed class JWTAuthStateProvider(ProtectedLocalStorage protectedLocalSto
 
 		if (newTokens is null)
 		{
+			await protectedLocalStorage.DeleteAsync("tokens");
+
 			return null;
 		}
 
 		await protectedLocalStorage.SetAsync("tokens", newTokens);
 
 		return newTokens.AccessToken;
-	}
-
-	public async Task NotifyAuthenticationStateChangedAsync()
-	{
-		var task = Task.FromResult(await GetAuthenticationStateAsync());
-
-		NotifyAuthenticationStateChanged(task);
 	}
 }

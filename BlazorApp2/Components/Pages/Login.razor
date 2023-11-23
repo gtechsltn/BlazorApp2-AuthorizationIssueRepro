@@ -55,7 +55,7 @@
 
 		await ProtectedLocalStorage.SetAsync("tokens", tokens);
 
-		await ((JWTAuthStateProvider)AuthenticationStateProvider).NotifyAuthenticationStateChangedAsync();
+		((JWTAuthStateProvider)AuthenticationStateProvider).NotifyAuthenticationState(tokens);
 
 		NavigationManager.NavigateTo(string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl);
 	}

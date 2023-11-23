@@ -81,9 +81,9 @@ public sealed class AuthService(UserManager<ApplicationUser> userManager, IConfi
 			}
 		}
 
-		var email = claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Email)?.Value;
+		var email = claims.FirstOrDefault(x => x.Type == ClaimTypes.Email)?.Value;
 
-		if (email is null)
+		if (string.IsNullOrWhiteSpace(email))
 		{
 			return null;
 		}
@@ -95,27 +95,12 @@ public sealed class AuthService(UserManager<ApplicationUser> userManager, IConfi
 			return null;
 		}
 
-		if (user.RefreshToken != tokens.RefreshToken || user.RefreshTokenExpiry < DateTime.UtcNow)
+		if (user.RefreshToken != tokens.RefreshToken || !user.RefreshTokenExpiry.HasValue || user.RefreshTokenExpiry.Value <= DateTime.UtcNow)
 		{
 			return null;
 		}
 
-		var newClaims = new List<Claim>
-		{
-			new(ClaimTypes.NameIdentifier, user.Id),
-			new(ClaimTypes.Email, email),
-			new(ClaimTypes.Name, email),
-			new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-		};
-
-		var userRoles = (List<string>)await userManager.GetRolesAsync(user);
-
-		if (userRoles.Count != 0)
-		{
-			userRoles.ForEach(userRole => newClaims.Add(new Claim(ClaimTypes.Role, userRole)));
-		}
-
-		var accessToken = GenerateAccessToken(newClaims);
+		var accessToken = GenerateAccessToken(claims);
 		var refreshToken = GenerateRefreshToken();
 
 		user.RefreshToken = refreshToken;
@@ -137,10 +122,10 @@ public sealed class AuthService(UserManager<ApplicationUser> userManager, IConfi
 
 	private string GenerateAccessToken(IEnumerable<Claim> claims)
 	{
-		var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
-		var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-		var token = new JwtSecurityToken(issuer, audience, claims, expires: accessTokenExpiry, signingCredentials: creds);
+		var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+		var signingCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256Signature);
+		var jwtSecurityToken = new JwtSecurityToken(issuer, audience, claims, expires: accessTokenExpiry, signingCredentials: signingCredentials);
 
-		return new JwtSecurityTokenHandler().WriteToken(token);
+		return new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken);
 	}
 }
